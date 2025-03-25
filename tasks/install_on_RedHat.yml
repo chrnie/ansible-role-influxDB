@@ -1,0 +1,10 @@
+---
+
+- name: add the InfluxDB Repository hinzu
+  yum_repository:
+    name: influxdb
+    description: InfluxDB Repository
+    baseurl: "https://repos.influxdata.com/rhel/{{ ansible_distribution_version | regex_replace('^(\\d+).*', '\\1') }}/x86_64/stable"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "{{ influxdb_gpg_key_url }}"

@@ -1,6 +1,15 @@
 ---
 # tasks file for influxDB
 
+- name: Check supported operatingsystems
+  block:
+    - name: Install on {{ ansible_os_family }}
+      ansible.builtin.include_tasks: "install_on_{{ ansible_os_family }}.yml"
+  rescue:
+    - name: "OS family not supported!"
+      ansible.builtin.fail:
+        msg: "The OS {{ ansible_os_family }} is not supported!"
+
 - name: install influxDB2
   package:
     name: influxdb2
