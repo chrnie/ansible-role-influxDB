@@ -1,0 +1,7 @@
+---
+# handlers file for influxDB
+
+- name: reload influxDB service
+  service:
+    name: influxdb
+    state: reloaded

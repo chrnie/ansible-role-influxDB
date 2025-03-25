@@ -1,0 +1,19 @@
+---
+# defaults file for influxDB
+
+influxdb_primary:
+  organization: example-org
+  bucket: example-bucket
+  username: example-user
+  password: EXAMPLEPW
+  token: example-token
+
+influxdb_organizations: {}
+
+influxdb_users: {}
+
+influxdb_buckets: {}
+
+influxdb_storage: /var/lib/influxdb
+influxdb_cert: /etc/ssl/certs/host.crt
+influxdb_key: /etc/ssl/private/host.key
