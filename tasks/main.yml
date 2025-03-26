@@ -15,6 +15,19 @@
     name: influxdb2
     state: present
 
+- name: Check if the ssl-cert group exists
+  command: getent group ssl-cert
+  register: ssl_cert_group
+  ignore_errors: true
+  changed_when: false
+
+- name: Add user to ssl-cert group (if group exists and condition is met)
+  user:
+    name: influxdb # Replace with the desired username
+    groups: ssl-cert
+    append: yes
+  when: add_user_to_group_ssl_cert and ssl_cert_group.rc == 0
+
 - name: ensure user permissions on storage dir
   file:
     path: "{{ influxdb_storage}}"
@@ -53,16 +66,16 @@
   until: _ping.rc == 0
   changed_when: false
 
-- name: set influxdb default user, organization, and bucket
-  influx_setup:
-    host: "https://{{ansible_ssh_host}}:8086"
-    org: "{{ influxdb_primary.organization }}"
-    bucket: "{{ influxdb_primary.bucket }}"
-    username: "{{ influxdb_primary.username }}"
-    password: "{{ influxdb_primary.password }}"
-    token: "{{ influxdb_primary.token }}"
-    force: true
-  register: _setup
+#- name: set influxdb default user, organization, and bucket
+#  influx_setup:
+#    host: "https://{{ansible_ssh_host}}:8086"
+#    org: "{{ influxdb_primary.organization }}"
+#    bucket: "{{ influxdb_primary.bucket }}"
+#    username: "{{ influxdb_primary.username }}"
+#    password: "{{ influxdb_primary.password }}"
+#    token: "{{ influxdb_primary.token }}"
+#    force: true
+#  register: _setup
 
 #- name: ensure organizations exists
 #  influx_organizations:

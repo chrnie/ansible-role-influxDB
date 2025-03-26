@@ -17,3 +17,7 @@ influxdb_buckets: {}
 influxdb_storage: /var/lib/influxdb
 influxdb_cert: /etc/ssl/certs/host.crt
 influxdb_key: /etc/ssl/private/host.key
+
+influxdb_gpg_key_url: "https://repos.influxdata.com/influxdb.key"
+
+add_user_to_group_ssl_cert: true

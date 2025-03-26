@@ -17,7 +17,6 @@
 - name: Install InfluxDB and basic setup
   remote_user: root
   hosts: localhost
-  hosts: dtsec_mon_influxdb
   tasks:
     - name: configure basic access
       shell: |
