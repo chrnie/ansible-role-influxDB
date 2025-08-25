@@ -15,6 +15,11 @@
     name: influxdb2
     state: present
 
+- name: install influxDB2 CLI
+  package:
+    name: influxdb2-cli
+    state: present
+
 - name: Check if the ssl-cert group exists
   command: getent group ssl-cert
   register: ssl_cert_group

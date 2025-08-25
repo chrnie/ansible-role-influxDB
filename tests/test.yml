@@ -5,13 +5,15 @@
   hosts: localhost
   become: true
   roles:
-    - influxDB
+    - chrnie.influxDB
   post_tasks:
     - name: bash completion
       shell: |
         influx completion bash > /etc/bash_completion.d/influx
       args:
         creates: /etc/bash_completion.d/influx
+  tags:
+    - install
 
 
 - name: Install InfluxDB and basic setup
@@ -43,3 +45,5 @@
           - "Copy the read-only api key for icingaweb"
           - "Copy the write-only api key for icinga"
           - "Write the missing variables to other playbooks"
+  tags:
+    - config
