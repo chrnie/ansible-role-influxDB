@@ -1,0 +1,91 @@
+---
+# Update settings from vault
+
+- name: Set variables based on vault data
+  ansible.builtin.set_fact:
+    influxdb_v1_password: "{{ vars['influxdb_' + inventory_hostname]['v1_password'] }}"
+    influxdb_v1_user: "{{ vars['influxdb_' + inventory_hostname]['v1_user'] }}"
+  when: "('influxdb_' + inventory_hostname) in vars"
+
+# Initial setup tasks for InfluxDB
+- name: Ensure required directories exist
+  file:
+    path: "{{ influx_storage.path }}"
+    state: directory
+    owner: "{{ influx_storage.user }}"
+    group: "{{ influx_storage.group }}"
+    mode: "{{ influx_storage.mode }}"
+
+# Manage TLS
+- name: Setup TLS (system_sslcert)
+  ansible.builtin.include_tasks: setup_tls_mode_system_sslcert.yml
+  when: influx_tls_mode == 'system_sslcert'
+
+- name: Setup TLS (system_acl)
+  ansible.builtin.include_tasks: setup_tls_mode_system_acl.yml
+  when: influx_tls_mode == 'system_acl'
+
+- name: Setup TLS (influx_copy)
+  ansible.builtin.include_tasks: setup_tls_mode_influx_copy.yml
+  when: influx_tls_mode == 'influx_copy'
+
+- name: Setup TLS (ca copy)
+  ansible.builtin.include_tasks: setup_tls_ca_copy.yml
+  when: influx_tls_ca_mode == 'ca_copy'
+
+# base daemon configuration
+- name: configure influxDB
+  template:
+    src: config.toml.j2
+    dest: /etc/influxdb/config.toml
+    mode: 0644
+    owner: influxdb
+    group: influxdb
+  register: influx_conf
+
+- name: Restart influxdb daemon if config or certs changed
+  ansible.builtin.systemd:
+    name: influxdb
+    state: restarted
+  when:
+    - influx_conf.changed | default(false)
+
+# debugging infos
+- name: Show InfluxDB daemon version
+  ansible.builtin.command: influxd version
+  register: influxd_version
+  changed_when: false
+
+- name: Print InfluxDB daemon version
+  ansible.builtin.debug:
+    var: influxd_version.stdout
+
+- name: Show InfluxDB CLI version
+  ansible.builtin.command: influx version
+  register: influx_cli_version
+  changed_when: false
+
+- name: Print InfluxDB CLI version
+  ansible.builtin.debug:
+    var: influx_cli_version.stdout
+
+- name: Check if InfluxDB is already initialized
+  uri:
+    url: "{{ 'https://' + inventory_hostname + ':8086' if influx_tls_mode != 'no_tls' else 'http://localhost:8086' }}/api/v2/setup"
+    method: GET
+    status_code: 200
+  register: influxdb2_setup
+  failed_when: false
+  changed_when: false
+
+- name: Set fact whether InfluxDB needs setup
+  set_fact:
+    influxdb2_needs_setup: "{{ influxdb2_setup.json.allowed | default(false) }}"
+
+- name: Initial database setup (InfluxDB v2.x)
+  command: "influx setup --bucket {{ influxdb_bucket }} --retention {{ influxdb_retention }} --org {{ influxdb_org }} --username {{ influxdb_root_user }} --password {{ influxdb_root_password }} --host={{ 'https://' + inventory_hostname + ':8086' if influx_tls_mode != 'no_tls' else 'http://localhost:8086' }} --force"
+  when:
+    - influxdb2_needs_setup
+  changed_when: true
+
+

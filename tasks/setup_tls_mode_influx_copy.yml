@@ -1,0 +1,29 @@
+---
+# TLS Zertifikate: nach /etc/influxdb/tls kopieren
+
+- name: Ensure TLS directory exists
+  ansible.builtin.file:
+    path: "{{ influx_tls_copy_cert_dest | dirname }}"
+    state: directory
+    owner: "{{ influx_storage.user }}"
+    group: "{{ influx_storage.group }}"
+    mode: '0750'
+
+- name: Copy TLS certs to influxdb directory
+  copy:
+    src: "{{ influx_tls_copy_cert_src }}"
+    dest: "{{ influx_tls_copy_cert_dest }}"
+    owner: "{{ influx_storage.user }}"
+    group: "{{ influx_storage.group }}"
+    mode: '0600'
+  register: influx_cert
+
+- name: Copy TLS key to influxdb directory
+  copy:
+    src: "{{ influx_tls_copy_key_src }}"
+    dest: "{{ influx_tls_copy_key_dest }}"
+    owner: "{{ influx_storage.user }}"
+    group: "{{ influx_storage.group }}"
+    mode: '0600'
+  register: influx_key
+

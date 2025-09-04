@@ -1,23 +1,62 @@
 ---
-# defaults file for influxDB
+# Default variables for ansible-role-influxDB
 
-influxdb_primary:
-  organization: example-org
-  bucket: example-bucket
-  username: example-user
-  password: EXAMPLEPW
-  token: example-token
+# Optionen: install, setup, resources, restore
+influxdb_action: 
+  - install
+  - setup
+# - restore
+  - resources
 
-influxdb_organizations: {}
 
-influxdb_users: {}
+# Ressources
+influxdb_org: "myorg"
+influxdb_bucket: "metrics"
+influxdb_retention: "72h"
+influxdb_v1_password_length: 20
+influxdb_install_state: present
+influxdb_version: latest
+influxdb_root_user: "root"
+influxdb_root_password: "bitteÄndern&@1SicherenOrtAblegen!"
 
-influxdb_buckets: {}
+vault_file: "group_vars/all/vault.yml"
+vault_secret: ".secret"
 
-influxdb_storage: /var/lib/influxdb
-influxdb_cert: /etc/ssl/certs/host.crt
-influxdb_key: /etc/ssl/private/host.key
+influx_repo:
+  RedHat: "https://repos.influxdata.com/rhel/$releasever/$basearch/stable"
+  Debian: "deb https://repos.influxdata.com/debian stable main"
+  Ubuntu: "deb https://repos.influxdata.com/ubuntu stable main"
 
-influxdb_gpg_key_url: "https://repos.influxdata.com/influxdb.key"
 
-add_user_to_group_ssl_cert: true
+influx_user: "{{ influx_os_user[ansible_os_family] }}"
+influx_group: "{{ influx_os_group[ansible_os_family] }}"
+
+influx_storage:
+  path: "/var/lib/influxdb"
+  user: "{{ influx_user[ansible_os_family] }}"
+  group: "{{ influx_group[ansible_os_family] }}"
+  mode: '0755'
+
+# Manage TLS
+## TLS-Mode: system_sslcert, system_acl, influx_copy, no_tls
+### system_sslcert: use certificate and key from the system, add user influxdb to group ssl-certs
+### system_acl: use certificate and key from the system, set acl for influxdb user on the files
+### influx_copy: copy certificate and key to the influxdb etc folder
+influx_tls_mode: "system_sslcert"
+##CA Handling
+### system: use CA provided on the system
+### influx_copy: copy CA to the system and update ca-trust
+influx_tls_ca_mode: "system"  # Optionen: system, ca_copy
+## Paths
+influx_tls_cert_path: "{{ influx_os_tls_cert_path[ansible_os_family] }}"
+influx_tls_key_path: "{{ influx_os_tls_key_path[ansible_os_family] }}"
+influx_tls_ca_path: "{{ influx_os_tls_ca_path[ansible_os_family] }}"
+## if you copy the files directly to the influx etc folder, define the src and dest path
+influx_tls_copy_cert_src: certs/snakeoil-server.crt
+influx_tls_copy_key_src: certs/snakeoil-server.key
+influx_tls_copy_ca_src: certs/snakeoil-ca.crt
+influx_tls_copy_cert_dest: "/etc/influxdb/tls/server.crt"
+influx_tls_copy_key_dest: "/etc/influxdb/tls/server.key"
+
+# Restore
+influxdb_restore_file: "/restore/backup.tar.gz"

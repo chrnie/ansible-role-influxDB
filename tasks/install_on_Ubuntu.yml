@@ -1,8 +1,8 @@
 ---
-# Install InfluxDB on Debian
+# Install InfluxDB on Ubuntu
 - name: Add InfluxDB repository
   apt_repository:
-    repo: "{{ influx_repo.Debian }}"
+    repo: "{{ influx_repo.Ubuntu }}"
     state: present
 
 - name: Install InfluxDB

@@ -1,0 +1,47 @@
+---
+
+
+# RedHat
+- name: Copy CA certificate for EL
+  copy:
+    src: "{{ influx_tls_copy_ca_src }}"
+    dest: "{{ influx_tls_ca_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: "ansible_os_family == 'RedHat'"
+
+- name: Update CA trust for EL
+  command: update-ca-trust extract
+  when: "ansible_os_family == 'RedHat'"
+  changed_when: false
+
+# Ubuntu/Debian
+- name: Copy CA certificate for Debian/Ubuntu
+  copy:
+    src: "{{ influx_tls_copy_ca_src }}"
+    dest: "{{ influx_tls_ca_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: "ansible_os_family == 'Ubuntu' or ansible_distribution == 'Debian'"
+
+- name: Update CA trust for Debian/Ubuntu
+  command: update-ca-certificates
+  when: "ansible_os_family == 'Ubuntu' or ansible_distribution == 'Debian'"
+  changed_when: false
+
+# Archlinux
+- name: Copy CA certificate for Arch
+  copy:
+    src: "{{ influx_tls_copy_ca_src }}"
+    dest: "{{ influx_tls_ca_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == 'Archlinux'
+
+- name: Update CA trust for Arch
+  command: trust extract-compat
+  when: ansible_os_family == 'Archlinux'
+  changed_when: false

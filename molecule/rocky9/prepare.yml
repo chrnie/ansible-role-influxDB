@@ -1,0 +1,131 @@
+---
+- name: Reset vault file
+  hosts: all
+  tasks:
+    - name: Create initial vault file if not exists
+      copy:
+        dest: "{{ vault_file }}"
+        content: |
+          # Example settings for other applications
+          example_application:
+            username: admin
+            password: supersecret
+          other_application:
+            api_key: abcdef123456
+        mode: "0600"
+        force: yes
+      run_once: true
+      delegate_to: localhost
+
+    - name: Encrypt vault file
+      command: >
+        ansible-vault encrypt {{ vault_file }}
+        --vault-password-file {{ playbook_dir }}/vault_secret.txt
+        --encrypt-vault-id default
+      delegate_to: localhost
+      run_once: true
+      become: no
+      when: 
+        - "'$ANSIBLE_VAULT;' not in lookup('file', vault_file)"
+
+
+- name: Prepare certificates for the case it's provided by "system" with acl access
+  hosts: rocky9-tls-acl
+  vars_files:
+    - ../../vars/main.yml
+  vars:
+    influx_tls_cert_src: ../../certs/snakeoil-server.crt
+    influx_tls_key_src: ../../certs/snakeoil-server.key
+  tasks:
+    - name: Copy TLS certs to system directory
+      copy:
+        src: "{{ influx_tls_cert_src }}"
+        dest: "{{ influx_os_tls_cert_path[ansible_os_family] }}"
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Copy TLS key to system directory
+      copy:
+        src: "{{ influx_tls_key_src }}"
+        dest: "{{ influx_os_tls_key_path[ansible_os_family] }}"
+        owner: root
+        group: root
+        mode: '0600'
+
+- name: Prepare certificates for the case it's provided by "system" with ssl-cert group access
+  hosts: rocky9-tls-sslcert
+  vars_files:
+    - ../../vars/main.yml
+  vars:
+    influx_tls_cert_src: ../../certs/snakeoil-server.crt
+    influx_tls_key_src: ../../certs/snakeoil-server.key
+  tasks:
+    - name: create ssl-cert group
+      group:
+        name: ssl-cert
+        state: present
+
+    - name: Copy TLS certs to system directory
+      copy:
+        src: "{{ influx_tls_cert_src }}"
+        dest: "{{ influx_os_tls_cert_path[ansible_os_family] }}"
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Copy TLS key to system directory
+      copy:
+        src: "{{ influx_tls_key_src }}"
+        dest: "{{ influx_os_tls_key_path[ansible_os_family] }}"
+        owner: root
+        group: root
+        mode: '0600'
+
+- name: Prepare ca certificates for the case it's provided by "system..."
+  hosts: 
+    - rocky9-tls-acl
+    - rocky9-tls-sslcert
+  vars_files:
+    - ../../vars/main.yml
+  vars:
+    influx_tls_ca_src: ../../certs/snakeoil-ca.crt
+  tasks:
+    - name: Copy CA certificate for EL
+      copy:
+        src: "{{ influx_tls_ca_src }}"
+        dest: "/etc/pki/ca-trust/source/anchors/influxdb-ca.crt"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Update CA trust for EL
+      command: update-ca-trust extract
+
+
+
+#    - name: Copy CA certificate for Debian/Ubuntu
+#      copy:
+#        src: "{{ influx_tls_ca_src }}"
+#        dest: "/usr/local/share/ca-certificates/influxdb-ca.crt"
+#        owner: root
+#        group: root
+#        mode: '0644'
+#      when: "ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'"
+#
+#    - name: Update CA trust for Debian/Ubuntu
+#      command: update-ca-certificates
+#      when: "ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'"
+#
+#    - name: Copy CA certificate for Arch
+#      copy:
+#        src: "{{ influx_tls_ca_src }}"
+#        dest: "/etc/ca-certificates/trust-source/anchors/influxdb-ca.crt"
+#        owner: root
+#        group: root
+#        mode: '0644'
+#      when: ansible_distribution == 'Archlinux'
+#
+#    - name: Update CA trust for Arch
+#      command: trust extract-compat
+#      when: ansible_distribution == 'Archlinux'
+
+#influx_tls_ca_path: "{{ influx_os_tls_ca_path[ansible_os_family] }}"

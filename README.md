@@ -1,38 +1,93 @@
-Role Name
-=========
+# InfluxDB Ansible Playbook
 
-A brief description of the role goes here.
+## Übersicht
+ Dieses Playbook installiert und konfiguriert **InfluxDB 2.x**, legt Buckets mit Retention an,
+ erzeugt pro Bucket einen **Read- und einen Write-Token**, sowie einen **v1-User mit Passwort**.
+ Alle erzeugten Daten (Bucket-ID, Tokens, User, Passwörter) werden automatisch in
+ `group_vars/all/vault.yml` gespeichert und verschlüsselt.
 
-Requirements
-------------
+## Voraussetzungen
+ - Ansible >= 2.12
+ - Installiertes `community.general` Collection (für Random Passwords):
+   ```bash
+   ansible-galaxy collection install community.general
+   ```
+ - `ansible-vault` muss konfiguriert sein (Passwort-Datei oder Prompt).
+ - InfluxDB-CLI (`influx`) ist auf dem Target Host verfügbar.
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+## TLS Zertifikats-Modi
+Die Variable `influx_tls_mode` steuert, wie TLS-Zertifikate eingebunden werden:
 
-Role Variables
---------------
+- `system_sslcert`: Zertifikate liegen im System-Ordner, Gruppe `ssl-cert` erhält Leserechte.
+- `system_acl`: Zertifikate liegen im System-Ordner, Leserechte werden per ACL für den InfluxDB-User gesetzt.
+- `influx_copy`: Zertifikate werden nach `/etc/influxdb/tls/` kopiert und gehören dem InfluxDB-User.
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Beispiel für die Auswahl im `defaults/main.yml`:
+```yaml
+influx_tls_mode: "system_sslcert"  # oder "system_acl", "influx_copy"
+```
 
-Dependencies
-------------
+## Ausführung
+ ```bash
+ ansible-playbook site.yml --ask-vault-pass
+ ```
+ oder mit Passwort-Datei:
+ ```bash
+ ansible-playbook site.yml --vault-password-file ~/.vault_pass.txt
+ ```
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+## Idempotenz
+ - Buckets, Tokens und v1-User werden nur erstellt, wenn sie nicht existieren.
+ - Bereits bestehende Einträge werden wiederverwendet.
+ - Das Vault-File wird bei jedem Run aktualisiert, und neu verschlüsselt.
 
-Example Playbook
-----------------
+## group_vars/all/vault.yml Vorlage
+ Damit der erste Run sauber funktioniert, sollte `group_vars/all/vault.yml`
+ existieren und mit `ansible-vault create` angelegt werden:
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+ ```bash
+ ansible-vault create group_vars/all/vault.yml
+ ```
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Molecule Testumgebung
+Die Rolle kann mit [Molecule](https://molecule.readthedocs.io/) auf verschiedenen Distributionen und für alle TLS-Modi getestet werden.
 
-License
--------
+### Vorbereitung
+- Stelle sicher, dass Docker installiert ist.
+- Erzeuge die Snakeoil-Testzertifikate:
+  ```bash
+  bash create_snakeoil_certs.sh
+  ```
 
-BSD
+### Testen
+Wechsle in das gewünschte OS-Verzeichnis unter `molecule/` und starte die Tests:
 
-Author Information
-------------------
+```bash
+cd molecule/rocky9
+molecule test
+```
+Analog für `ubuntu`, `debian` und `arch`.
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+Jede Umgebung testet alle vierTLS-Modi (`system_sslcert`, `system_acl`, `influx_copy`, `no_tls`). Die Snakeoil-Zertifikate werden automatisch eingebunden.
+
+Weitere Infos zu Molecule: https://molecule.readthedocs.io/
+ ```
+
+ Nach dem ersten erfolgreichen Playbook-Run sieht die Datei etwa so aus:
+ ```yaml
+ influxdb:
+   metrics:
+     id: "0a1b2c3d4e5f..."
+     retention: "72h"
+     read_token: "abcd1234..."
+     write_token: "efgh5678..."
+     v1_user: "v1user_metrics"
+     v1_password: "randomPasswort123"
+ ```
+
+## Hinweise
+ - Alle Secrets werden mit `ansible-vault` verschlüsselt.
+ - Nutze `ansible-vault view group_vars/all/vault.yml`, um die Werte einzusehen.
+ - Falls du mehrere Buckets verwaltest, erscheinen sie einfach als weitere Keys unter `influxdb:`.
+ - Für ein sicheres Setup solltest du Passwörter **niemals** unverschlüsselt speichern.
+

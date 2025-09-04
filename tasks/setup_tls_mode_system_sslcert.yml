@@ -1,0 +1,30 @@
+---
+
+# TLS Zertifikate: System-Ordner, ssl-cert group
+- name: Ensure ssl-cert group exists
+  group:
+    name: ssl-cert
+    state: present
+
+- name: Ensure influxdb user is in ssl-cert group
+  ansible.builtin.user:
+    name: influxdb
+    groups: ssl-cert
+    append: true
+
+- name: Set group ownership to ssl-cert
+  file:
+    path: "{{ influx_tls_cert_path }}"
+    group: ssl-cert
+    state: file
+    mode: '0640'
+  register: influx_cert
+
+- name: Set group ownership to ssl-cert (Key)
+  file:
+    path: "{{ influx_tls_key_path }}"
+    group: ssl-cert
+    state: file
+    mode: '0640'
+  register: influx_key
+

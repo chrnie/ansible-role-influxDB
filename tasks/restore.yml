@@ -1,0 +1,6 @@
+# Restore InfluxDB from backup
+
+- name: Restore InfluxDB from backup
+	command: >
+		influx restore --full {{ influxdb_restore_file }}
+	when: influxdb_restore_file is defined and influxdb_restore_file | length > 0 and lookup('file', influxdb_restore_file, errors='ignore') is not none

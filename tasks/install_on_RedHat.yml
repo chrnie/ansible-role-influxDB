@@ -1,10 +1,22 @@
 ---
-
-- name: add the InfluxDB Repository hinzu
+# Install InfluxDB on EL
+- name: Add InfluxDB repository
   yum_repository:
     name: influxdb
     description: InfluxDB Repository
-    baseurl: "https://repos.influxdata.com/rhel/{{ ansible_distribution_version | regex_replace('^(\\d+).*', '\\1') }}/x86_64/stable"
+    baseurl: "{{ influx_repo.RedHat }}"
+    gpgcheck: no
     enabled: yes
-    gpgcheck: yes
-    gpgkey: "{{ influxdb_gpg_key_url }}"
+
+- name: Install InfluxDB2
+  dnf:
+    name:
+      - influxdb2
+      - influxdb2-cli
+    state: present
+
+- name: Ensure InfluxDB is started and enabled
+  service:
+    name: influxdb
+    state: started
+    enabled: yes

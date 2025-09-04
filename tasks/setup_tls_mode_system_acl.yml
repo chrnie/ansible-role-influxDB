@@ -1,0 +1,20 @@
+---
+# TLS Zertifikate: System-Ordner, ACL
+- name: Set ACL for influxdb user
+  acl:
+    path: "{{ influx_tls_cert_path }}"
+    entity: "{{ influx_storage.user }}"
+    etype: user
+    permissions: r
+    state: present
+  register: influx_cert
+
+- name: Set ACL for influxdb user (Key)
+  acl:
+    path: "{{ influx_tls_key_path }}"
+    entity: "{{ influx_storage.user }}"
+    etype: user
+    permissions: r
+    state: present
+  register: influx_key
+

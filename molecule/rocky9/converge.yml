@@ -1,0 +1,11 @@
+---
+- name: Test InfluxDB Role on Rocky9
+  hosts: influxdb
+  become: true
+  vars:
+    influx_tls_cert_src: ../../certs/snakeoil-server.crt
+    influx_tls_key_src: ../../certs/snakeoil-server.key
+  tasks:
+    - name: Test install, setup, TLS and resources
+      include_role:
+        name: influxdb

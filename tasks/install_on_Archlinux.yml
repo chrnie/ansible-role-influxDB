@@ -1,12 +1,7 @@
 ---
-# Install InfluxDB on Debian
-- name: Add InfluxDB repository
-  apt_repository:
-    repo: "{{ influx_repo.Debian }}"
-    state: present
-
-- name: Install InfluxDB
-  apt:
+# Install InfluxDB on Arch Linux
+- name: Install InfluxDB from community repo
+  pacman:
     name: influxdb
     state: present
     update_cache: yes

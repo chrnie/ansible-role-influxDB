@@ -1,101 +1,18 @@
 ---
 # tasks file for influxDB
 
-- name: Check supported operatingsystems
-  block:
-    - name: Install on {{ ansible_os_family }}
-      ansible.builtin.include_tasks: "install_on_{{ ansible_os_family }}.yml"
-  rescue:
-    - name: "OS family not supported!"
-      ansible.builtin.fail:
-        msg: "The OS {{ ansible_os_family }} is not supported!"
 
-- name: install influxDB2
-  package:
-    name: influxdb2
-    state: present
+# Optionen: install, setup, resources, restore, all
 
-- name: install influxDB2 CLI
-  package:
-    name: influxdb2-cli
-    state: present
+- name: Run installation tasks if requested
+  ansible.builtin.include_tasks: "install_on_{{ ansible_os_family }}.yml"
+  when: '"install" in influxdb_action or "all" in influxdb_action'
 
-- name: Check if the ssl-cert group exists
-  command: getent group ssl-cert
-  register: ssl_cert_group
-  ignore_errors: true
-  changed_when: false
+- name: Initial InfluxDB Setup
+  ansible.builtin.include_tasks: setup.yml
+  when: '"setup" in influxdb_action or "all" in influxdb_action'
 
-- name: Add user to ssl-cert group (if group exists and condition is met)
-  user:
-    name: influxdb # Replace with the desired username
-    groups: ssl-cert
-    append: yes
-  when: add_user_to_group_ssl_cert and ssl_cert_group.rc == 0
+- name: Add resources like buckets and tokens if requested
+  ansible.builtin.include_tasks: resources.yml
+  when: '"resources" in influxdb_action or "all" in influxdb_action'
 
-- name: ensure user permissions on storage dir
-  file:
-    path: "{{ influxdb_storage}}"
-    owner: influxdb
-    group: influxdb
-    mode: '0755'
-    state: directory
-
-- name: configure influxDB
-  template:
-    src: config.toml.j2
-    dest: /etc/influxdb/config.toml
-    mode: 0644
-    owner: influxdb
-    group: influxdb
-  register: influx_conf
-
-- name: Manage influxdb Service
-  service:
-    name: influxdb
-    state: started
-    enabled: yes
-
-- name: Manage influxdb Service
-  service:
-    name: influxdb
-    state: restarted
-  when: influx_conf.changed
-
-- name: ensure influxdb is up and running
-  influx_ping:
-    host: "https://{{ansible_ssh_host}}:8086"
-  retries: 10
-  delay: 5
-  register: _ping
-  until: _ping.rc == 0
-  changed_when: false
-
-#- name: set influxdb default user, organization, and bucket
-#  influx_setup:
-#    host: "https://{{ansible_ssh_host}}:8086"
-#    org: "{{ influxdb_primary.organization }}"
-#    bucket: "{{ influxdb_primary.bucket }}"
-#    username: "{{ influxdb_primary.username }}"
-#    password: "{{ influxdb_primary.password }}"
-#    token: "{{ influxdb_primary.token }}"
-#    force: true
-#  register: _setup
-
-#- name: ensure organizations exists
-#  influx_organizations:
-#    host: "http://127.0.0.1:8086"
-#    organizations: "{{ influxdb_organizations }}"
-#  register: _org
-#
-#- name: ensure users exist
-#  influx_users:
-#    host: "http://127.0.0.1:8086"
-#    users: "{{ influxdb_users }}"
-#  register: _users
-#
-#- name: ensure buckets exist
-#  influx_buckets:
-#    host: "http://127.0.0.1:8086"
-#    buckets: "{{ influxdb_buckets }}"
-#  register: _buckets

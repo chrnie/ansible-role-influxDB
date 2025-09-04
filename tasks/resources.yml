@@ -1,0 +1,184 @@
+---
+
+# ==============================
+# Bucket Management
+# ==============================
+- name: Get list of buckets
+  command: influx bucket list --org {{ influxdb_org }} --json
+  register: bucket_list
+  changed_when: false
+
+- name: Extract bucket info if exists
+  set_fact:
+    bucket_data: "{{ (bucket_list.stdout | from_json)
+                      | selectattr('name','equalto', influxdb_bucket) | first | default({}) }}"
+
+- name: Create bucket if missing
+  command: >
+    influx bucket create
+      --org {{ influxdb_org }}
+      --name {{ influxdb_bucket }}
+      --retention {{ influxdb_retention }}
+  when: bucket_data == {}
+  register: bucket_create
+
+- name: Refresh bucket list after creation
+  command: influx bucket list --org {{ influxdb_org }} --json
+  register: bucket_list_new
+  when: bucket_data == {}
+
+- name: Update bucket_data fact
+  set_fact:
+    bucket_data: "{{ (bucket_list_new.stdout | from_json)
+                      | selectattr('name','equalto', influxdb_bucket) | first
+                      if bucket_data == {} else bucket_data }}"
+
+# ==============================
+# Token Management
+# ==============================
+- name: List tokens
+  command: influx auth list --org {{ influxdb_org }} --json
+  register: token_list
+  changed_when: false
+
+- name: Extract existing tokens for this bucket
+  set_fact:
+    read_token_data: "{{ (token_list.stdout | from_json)
+                          | selectattr('description','equalto', influxdb_bucket ~ '_read')
+                          | first | default({}) }}"
+    write_token_data: "{{ (token_list.stdout | from_json)
+                          | selectattr('description','equalto', influxdb_bucket ~ '_write')
+                          | first | default({}) }}"
+
+- name: Create read token if missing
+  command: >
+    influx auth create
+      --org {{ influxdb_org }}
+      --read-bucket {{ bucket_data.id }}
+      --description {{ influxdb_bucket }}_read
+  when: read_token_data == {}
+  register: read_token_create
+
+- name: Create write token if missing
+  command: >
+    influx auth create
+      --org {{ influxdb_org }}
+      --write-bucket {{ bucket_data.id }}
+      --description {{ influxdb_bucket }}_write
+  when: write_token_data == {}
+  register: write_token_create
+
+- name: Refresh token list if any created
+  command: influx auth list --org {{ influxdb_org }} --json
+  register: token_list_new
+  when: read_token_data == {} or write_token_data == {}
+
+- name: Update token list fact
+  set_fact:
+    token_list_final: "{{ (token_list_new.stdout | from_json) 
+                          if (read_token_data == {} or write_token_data == {})
+                          else (token_list.stdout | from_json) }}"
+
+- name: Update token data facts
+  set_fact:
+    read_token_data: "{{ (token_list_final | default([]) | selectattr('description','equalto', influxdb_bucket ~ '_read') | first | default({})) }}"
+    write_token_data: "{{ (token_list_final | default([]) | selectattr('description','equalto', influxdb_bucket ~ '_write') | first | default({})) }}"
+
+# ==============================
+# V1 Auth Management
+# ==============================
+- name: List v1 auths
+  command: influx v1 auth list --json
+  register: v1auth_list
+  changed_when: false
+
+- name: Print Influx v1 auth list output
+  debug:
+    var: v1auth_list.stdout
+
+- name: Parse v1 auth list JSON
+  set_fact:
+    v1auth_tokens: "{{ (v1auth_list.stdout | from_json) | map(attribute='token') | list }}"
+
+- name: Show only tokens (v1 usernames)
+  debug:
+    var: v1auth_tokens
+
+- name: Generate random v1 password if missing
+  set_fact:
+    influxdb_v1_password: "{{ lookup('community.general.random_string', length=20, special=false) }}"
+  when: v1auth_tokens == []
+
+- name: Create v1 auth if missing
+  command: >
+    influx v1 auth create
+      --username v1user_{{ influxdb_bucket }}
+      --password {{ influxdb_v1_password }}
+      --read-bucket {{ bucket_data.id }}
+      --write-bucket {{ bucket_data.id }}
+  when: v1auth_tokens == []
+  register: v1auth_create
+
+- name: Refresh v1 auth list if created
+  command: influx v1 auth list --json
+  register: v1auth_list_new
+  when: v1auth_tokens == []
+
+- name: Parse v1 auth list JSON
+  set_fact:
+    v1auth_tokens: "{{ (v1auth_list_new.stdout | from_json) | map(attribute='token') | list }}"
+  when: v1auth_tokens == []
+
+- name: Debug v1 auth list output
+  debug:
+    var: v1auth_list_new.stdout | from_json
+  when: v1auth_tokens == []
+
+# ==============================
+# Vault Update (local)
+# ==============================
+- name: Load existing vault vars
+  include_vars:
+    file: "{{ vault_file }}"
+    name: vault_data
+  delegate_to: localhost
+  ignore_errors: yes
+
+- name: Set influxdb key name
+  set_fact:
+    influxdb_key: "influxdb_{{ inventory_hostname }}"
+
+- name: Merge influxdb state into vault vars
+  set_fact:
+    vault_data: "{{ (vault_data | default({})) | combine({
+      (influxdb_key): {
+        (influxdb_bucket): {
+          'id': bucket_data.id,
+          'retention': influxdb_retention,
+          'read_token': read_token_data.token,
+          'write_token': write_token_data.token,
+          'v1_user': 'v1user_' ~ influxdb_bucket,
+          'v1_password': (influxdb_v1_password | default('***already set***'))
+        }
+      }
+    }, recursive=True) }}"
+
+- name: Save updated vault file (unencrypted)
+  copy:
+    dest: "{{ vault_file }}"
+    content: "{{ vault_data | to_nice_yaml }}"
+  delegate_to: localhost
+  become: no
+
+- name: Encrypt vault file if needed
+  command: >
+    ansible-vault encrypt {{ vault_file }}
+    --vault-password-file {{ vault_secret }}
+    --encrypt-vault-id default
+  delegate_to: localhost
+  become: no
+  ignore_errors: true
+  run_once: true
+  when: "'$ANSIBLE_VAULT;' not in lookup('file', vault_file)"
+
+

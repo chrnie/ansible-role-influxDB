@@ -1,5 +1,19 @@
-bolt-path = "{{ influxdb_storage }}/influxd.bolt"
-engine-path = "{{ influxdb_storage }}/engine"
+# bolt-path: InfluxDB metadata database (BoltDB)
+bolt-path = "{{ influx_storage.path }}/influxd.bolt"
+# engine-path: Main storage engine directory
+engine-path = "{{ influx_storage.path }}/engine"
+# wal-dir: Write-Ahead Log directory
+wal-dir = "{{ influx_storage.path }}/wal"
+# meta-path: Metadata storage directory
+meta-path = "{{ influx_storage.path }}/meta"
 
-tls-cert = "{{influxdb_cert}}"
-tls-key = "{{influxdb_key}}"
+
+{% if influx_tls_mode != 'no_tls' %}
+{% if influx_tls_mode == 'influx_copy' %}
+tls-cert = "{{influx_tls_copy_cert_dest}}"
+tls-key = "{{influx_tls_copy_key_dest}}"
+{% else %}
+tls-cert = "{{influx_tls_cert_path}}"
+tls-key = "{{influx_tls_key_path}}"
+{% endif %}
+{% endif %}

@@ -1,0 +1,6 @@
+example_application:
+    password: supersecret
+    username: admin
+other_application:
+    api_key: abcdef123456
+
