@@ -78,6 +78,10 @@
   failed_when: false
   changed_when: false
 
+- name: Print InfluxDB setup check
+  ansible.builtin.debug:
+      var: influxdb2_setup
+
 - name: Set fact whether InfluxDB needs setup
   set_fact:
     influxdb2_needs_setup: "{{ influxdb2_setup.json.allowed | default(false) }}"
