@@ -4,6 +4,15 @@
 
 # Options: install, setup, resources, restore, all
 
+- name: Create Storage directory
+  ansible.builtin.file:
+    path: "{{ influx_storage.path }}"
+    state: directory
+    owner: "{{ influx_storage.user }}"
+    group: "{{ influx_storage.group }}"
+    mode: "{{ influx_storage.mode }}"
+  when: '"install" in influxdb_action or "all" in influxdb_action'
+
 - name: Run installation tasks if requested
   ansible.builtin.include_tasks: "install_on_{{ ansible_os_family }}.yml"
   when: '"install" in influxdb_action or "all" in influxdb_action'
