@@ -1,5 +1,5 @@
 ---
-# TLS Zertifikate: System-Ordner, ACL
+# TLS certificates: system folder, ACL
 - name: Set ACL for influxdb user
   acl:
     path: "{{ influx_tls_cert_path }}"

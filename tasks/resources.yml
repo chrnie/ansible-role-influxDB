@@ -1,4 +1,12 @@
 ---
+#- name: Debug InfluxDB Login Config
+#  command: cat "{{ ansible_user_dir }}/.influxdbv2/config.yml"
+#  register: influx_config
+#  changed_when: false
+
+#- name: Print InfluxDB Login Config
+#  debug:
+#    var: influx_config.stdout_lines
 
 # ==============================
 # Bucket Management

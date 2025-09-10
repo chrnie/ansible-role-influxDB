@@ -2,7 +2,7 @@
 # tasks file for influxDB
 
 
-# Optionen: install, setup, resources, restore, all
+# Options: install, setup, resources, restore, all
 
 - name: Run installation tasks if requested
   ansible.builtin.include_tasks: "install_on_{{ ansible_os_family }}.yml"

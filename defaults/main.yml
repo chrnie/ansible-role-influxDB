@@ -1,7 +1,7 @@
 ---
 # Default variables for ansible-role-influxDB
 
-# Optionen: install, setup, resources, restore
+# Options: install, setup, resources, restore
 influxdb_action: 
   - install
   - setup
@@ -9,7 +9,7 @@ influxdb_action:
   - resources
 
 
-# Ressources
+# Resources
 influxdb_org: "myorg"
 influxdb_bucket: "metrics"
 influxdb_retention: "72h"
@@ -38,16 +38,16 @@ influx_storage:
   mode: '0755'
 
 # Manage TLS
-## TLS-Mode: system_sslcert, system_acl, influx_copy, no_tls
-### system_sslcert: use certificate and key from the system, add user influxdb to group ssl-certs
-### system_acl: use certificate and key from the system, set acl for influxdb user on the files
-### influx_copy: copy certificate and key to the influxdb etc folder
+# TLS-Mode: system_sslcert, system_acl, influx_copy, no_tls
+# system_sslcert: use certificate and key from the system, add user influxdb to group ssl-certs
+# system_acl: use certificate and key from the system, set acl for influxdb user on the files
+# influx_copy: copy certificate and key to the influxdb etc folder
 influx_tls_mode: "system_sslcert"
-##CA Handling
-### system: use CA provided on the system
-### influx_copy: copy CA to the system and update ca-trust
-influx_tls_ca_mode: "system"  # Optionen: system, ca_copy
-## Paths
+# CA Handling
+# system: use CA provided on the system
+# influx_copy: copy CA to the system and update ca-trust
+influx_tls_ca_mode: "system"  # Options: system, ca_copy
+# Paths
 influx_tls_cert_path: "{{ influx_os_tls_cert_path[ansible_os_family] }}"
 influx_tls_key_path: "{{ influx_os_tls_key_path[ansible_os_family] }}"
 influx_tls_ca_path: "{{ influx_os_tls_ca_path[ansible_os_family] }}"

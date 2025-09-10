@@ -1,5 +1,5 @@
 ---
-# TLS Zertifikate: nach /etc/influxdb/tls kopieren
+# TLS certificates: copy to /etc/influxdb/tls
 
 - name: Ensure TLS directory exists
   ansible.builtin.file:

@@ -1,4 +1,4 @@
-# Snakeoil Test-Zertifikate
+# Snakeoil Test Certificates
 
 Diese Zertifikate und Keys sind ausschließlich für Testzwecke gedacht!
 

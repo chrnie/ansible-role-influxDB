@@ -1,6 +1,6 @@
 ---
 
-# TLS Zertifikate: System-Ordner, ssl-cert group
+# TLS certificates: system folder, ssl-cert group
 - name: Ensure ssl-cert group exists
   group:
     name: ssl-cert

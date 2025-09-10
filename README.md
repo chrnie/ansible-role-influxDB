@@ -1,93 +1,89 @@
+
 # InfluxDB Ansible Playbook
 
-## Übersicht
- Dieses Playbook installiert und konfiguriert **InfluxDB 2.x**, legt Buckets mit Retention an,
- erzeugt pro Bucket einen **Read- und einen Write-Token**, sowie einen **v1-User mit Passwort**.
- Alle erzeugten Daten (Bucket-ID, Tokens, User, Passwörter) werden automatisch in
- `group_vars/all/vault.yml` gespeichert und verschlüsselt.
+## Overview
+This playbook installs and configures **InfluxDB 2.x**, creates buckets with retention, generates a **read and write token** for each bucket, and a **v1 user with password**. All generated data (bucket ID, tokens, user, passwords) are automatically stored and encrypted in `group_vars/all/vault.yml`.
 
-## Voraussetzungen
- - Ansible >= 2.12
- - Installiertes `community.general` Collection (für Random Passwords):
-   ```bash
-   ansible-galaxy collection install community.general
-   ```
- - `ansible-vault` muss konfiguriert sein (Passwort-Datei oder Prompt).
- - InfluxDB-CLI (`influx`) ist auf dem Target Host verfügbar.
+## Requirements
+- Ansible >= 2.12
+- Installed `community.general` collection (for random passwords):
+  ```bash
+  ansible-galaxy collection install community.general
+  ```
+- `ansible-vault` must be configured (password file or prompt).
+- InfluxDB CLI (`influx`) must be available on the target host.
 
-## TLS Zertifikats-Modi
-Die Variable `influx_tls_mode` steuert, wie TLS-Zertifikate eingebunden werden:
+## TLS Certificate Modes
+The variable `influx_tls_mode` controls how TLS certificates are integrated:
 
-- `system_sslcert`: Zertifikate liegen im System-Ordner, Gruppe `ssl-cert` erhält Leserechte.
-- `system_acl`: Zertifikate liegen im System-Ordner, Leserechte werden per ACL für den InfluxDB-User gesetzt.
-- `influx_copy`: Zertifikate werden nach `/etc/influxdb/tls/` kopiert und gehören dem InfluxDB-User.
+- `system_sslcert`: Certificates are in the system folder, group `ssl-cert` gets read access.
+- `system_acl`: Certificates are in the system folder, read access is set via ACL for the InfluxDB user.
+- `influx_copy`: Certificates are copied to `/etc/influxdb/tls/` and owned by the InfluxDB user.
 
-Beispiel für die Auswahl im `defaults/main.yml`:
+Example selection in `defaults/main.yml`:
 ```yaml
-influx_tls_mode: "system_sslcert"  # oder "system_acl", "influx_copy"
+influx_tls_mode: "system_sslcert"  # or "system_acl", "influx_copy"
 ```
 
-## Ausführung
- ```bash
- ansible-playbook site.yml --ask-vault-pass
- ```
- oder mit Passwort-Datei:
- ```bash
- ansible-playbook site.yml --vault-password-file ~/.vault_pass.txt
- ```
+## Usage
+```bash
+ansible-playbook site.yml --ask-vault-pass
+```
+or with password file:
+```bash
+ansible-playbook site.yml --vault-password-file ~/.vault_pass.txt
+```
 
-## Idempotenz
- - Buckets, Tokens und v1-User werden nur erstellt, wenn sie nicht existieren.
- - Bereits bestehende Einträge werden wiederverwendet.
- - Das Vault-File wird bei jedem Run aktualisiert, und neu verschlüsselt.
+## Idempotency
+- Buckets, tokens, and v1 users are only created if they do not exist.
+- Existing entries are reused.
+- The vault file is updated and re-encrypted on every run.
 
-## group_vars/all/vault.yml Vorlage
- Damit der erste Run sauber funktioniert, sollte `group_vars/all/vault.yml`
- existieren und mit `ansible-vault create` angelegt werden:
+## group_vars/all/vault.yml Template
+To ensure the first run works cleanly, `group_vars/all/vault.yml` should exist and be created with `ansible-vault create`:
 
- ```bash
- ansible-vault create group_vars/all/vault.yml
- ```
+```bash
+ansible-vault create group_vars/all/vault.yml
+```
 
-## Molecule Testumgebung
-Die Rolle kann mit [Molecule](https://molecule.readthedocs.io/) auf verschiedenen Distributionen und für alle TLS-Modi getestet werden.
+## Molecule Test Environment
+The role can be tested with [Molecule](https://molecule.readthedocs.io/) on various distributions and for all TLS modes.
 
-### Vorbereitung
-- Stelle sicher, dass Docker installiert ist.
-- Erzeuge die Snakeoil-Testzertifikate:
+### Preparation
+- Make sure Docker is installed.
+- Generate the snakeoil test certificates:
   ```bash
   bash create_snakeoil_certs.sh
   ```
 
-### Testen
-Wechsle in das gewünschte OS-Verzeichnis unter `molecule/` und starte die Tests:
+### Testing
+Change to the desired OS directory under `molecule/` and start the tests:
 
 ```bash
 cd molecule/rocky9
 molecule test
 ```
-Analog für `ubuntu`, `debian` und `arch`.
+Analogously for `ubuntu`, `debian`, and `arch`.
 
-Jede Umgebung testet alle vierTLS-Modi (`system_sslcert`, `system_acl`, `influx_copy`, `no_tls`). Die Snakeoil-Zertifikate werden automatisch eingebunden.
+Each environment tests all four TLS modes (`system_sslcert`, `system_acl`, `influx_copy`, `no_tls`). The snakeoil certificates are automatically included.
 
-Weitere Infos zu Molecule: https://molecule.readthedocs.io/
- ```
+More info on Molecule: https://molecule.readthedocs.io/
 
- Nach dem ersten erfolgreichen Playbook-Run sieht die Datei etwa so aus:
- ```yaml
- influxdb:
-   metrics:
-     id: "0a1b2c3d4e5f..."
-     retention: "72h"
-     read_token: "abcd1234..."
-     write_token: "efgh5678..."
-     v1_user: "v1user_metrics"
-     v1_password: "randomPasswort123"
- ```
+After the first successful playbook run, the file will look like this:
+```yaml
+influxdb:
+  metrics:
+    id: "0a1b2c3d4e5f..."
+    retention: "72h"
+    read_token: "abcd1234..."
+    write_token: "efgh5678..."
+    v1_user: "v1user_metrics"
+    v1_password: "randomPassword123"
+```
 
-## Hinweise
- - Alle Secrets werden mit `ansible-vault` verschlüsselt.
- - Nutze `ansible-vault view group_vars/all/vault.yml`, um die Werte einzusehen.
- - Falls du mehrere Buckets verwaltest, erscheinen sie einfach als weitere Keys unter `influxdb:`.
- - Für ein sicheres Setup solltest du Passwörter **niemals** unverschlüsselt speichern.
+## Notes
+- All secrets are encrypted with `ansible-vault`.
+- Use `ansible-vault view group_vars/all/vault.yml` to view the values.
+- If you manage multiple buckets, they will appear as additional keys under `influxdb:`.
+- For a secure setup, you should **never** store passwords unencrypted.
 
